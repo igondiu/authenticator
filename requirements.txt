@@ -1,0 +1,7 @@
+fastapi
+pydantic
+python-decouple
+PyJWT
+pytest
+uvicorn
+SQLAlchemy
