@@ -20,18 +20,8 @@ def create_session(db_connection, user: UserIn, device: DeviceIn):
             if db_session:
                 # Verify if the token is still valid
                 if not verify_token_expired(db_session.token, 120):
-                    return SessionResponse(
-                        uuid=db_session.uuid,
-                        created_at=db_session.created_at,
-                        token=db_session.token,
-                        is_new_user=db_session.is_new_user,
-                        is_new_device=db_session.is_new_device,
-                        user=schemas.User(**db_user.__dict__),
-                        device=schemas.Device(**db_device.__dict__),
-                        status=db_session.status
-                    ), 200
-                else:
-                    return create_db_session(db_connection, db_user, db_device)
+                    return db_session
+            return create_db_session(db_connection, db_user, db_device)
         else:
             db_device = crud.create_device(db_connection, device)
             if not db_device:
@@ -80,14 +70,16 @@ def create_db_session(db_connection, db_user, db_device):
     if not db_session:
         raise Exception("Something went wrong while creating a new session in the database")
 
-    session_resp = SessionResponse(
-        uuid=db_session.uuid,
-        created_at=db_session.created_at,
-        token=db_session.token,
-        is_new_user=db_session.is_new_user,
-        is_new_device=db_session.is_new_device,
-        user=schemas.User(**db_user.to_dict()),
-        device=schemas.Device(**db_device.to_dict()),
-        status=db_session.status
-    )
-    return session_resp, 201
+    return db_session
+
+
+def get_multiple_sessions(db_connection, page, page_size):
+    return crud.get_sessions(db_connection, page, page_size)
+
+
+def get_single_session(db_connection, session_uuid: str):
+    return db_connection.query(models.Session).filter(models.Session.uuid == session_uuid).first()
+
+
+def delete_single_session(db_connection, session_uuid: str):
+    return crud.delete_session(db_connection, session_uuid)

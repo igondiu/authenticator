@@ -1,9 +1,9 @@
 import logging
 
-from fastapi import APIRouter, Depends
-from fastapi import HTTPException
+from typing import Annotated, List
+from fastapi import APIRouter, Depends, Query
+from fastapi import HTTPException, Response
 from fastapi import Header
-from fastapi.responses import JSONResponse
 
 from sqlalchemy.orm import Session as DbConnection
 
@@ -29,7 +29,7 @@ def create_session(user: UserIn, device: DeviceIn, db: DbConnection = Depends(ge
         raise HTTPException(status_code=400, detail="Bad input parameter <vendor_uuid>")
 
     try:
-        result, response_code = manage_sessions.create_session(db, user, device)
+        result = manage_sessions.create_session(db, user, device)
         logging.debug("Session successfully created")
         return result
 
@@ -53,3 +53,29 @@ def validate_session(otp_code: str, Authorization: str = Header(None), db: DbCon
     except Exception as e:
         logging.exception(f"An error occurred while validating the session of user with token : {bearer_token}\n{e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/sessions", response_model=List[SessionResponse])
+def get_sessions(page: Annotated[int, Query()] = 1,
+                 page_size: Annotated[int, Query()] = 10,
+                 db: DbConnection = Depends(get_db)):
+    sessions = manage_sessions.get_multiple_sessions(db, page, page_size)
+    if not sessions:
+        raise HTTPException(status_code=404, detail=f"No sessions found")
+    return sessions
+
+
+@router.get("/sessions/{session_uuid}", response_model=SessionResponse)
+def get_session(session_uuid: str,  db: DbConnection = Depends(get_db)):
+    session = manage_sessions.get_single_session(db, session_uuid)
+    if not session:
+        raise HTTPException(status_code=404, detail=f"No session found with uuid {session_uuid}")
+    return session
+
+
+@router.delete("/sessions/{session_uuid}", response_model=SessionResponse)
+def get_session(session_uuid: str,  db: DbConnection = Depends(get_db)):
+    session = manage_sessions.delete_single_session(db, session_uuid)
+    if not session:
+        raise HTTPException(status_code=404, detail=f"No session found with uuid {session_uuid}")
+    return Response("OK")

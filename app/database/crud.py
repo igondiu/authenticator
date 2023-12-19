@@ -1,19 +1,9 @@
-import datetime
 import uuid
+
 from sqlalchemy.orm import Session as DbConnection
 
 from app.database import models
 from app.database import schemas
-
-
-def get_session(db: DbConnection, user_uuid: str, device_uuid: str):
-    return db.query(models.Session).filter(models.Session.user_uuid == user_uuid,
-                                           models.Session.device_uuid == device_uuid
-                                           ).order_by(models.Session.created_at.desc()).first()
-
-
-def get_session_by_token(db: DbConnection, token: str):
-    return db.query(models.Session).filter(models.Session.token == token).first()
 
 
 def create_session(db: DbConnection, session: schemas.Session):
@@ -31,10 +21,6 @@ def create_session(db: DbConnection, session: schemas.Session):
     return db_session
 
 
-def delete_session(db: DbConnection, user_id: int):
-    pass
-
-
 def patch_session(db: DbConnection, token: str):
     existing_session = db.query(models.Session).filter(token=token).fetchone()
     session = models.Session(existing_session)
@@ -42,6 +28,29 @@ def patch_session(db: DbConnection, token: str):
     db.refresh(session)
     db.commit()
     return session
+
+
+def get_sessions(db: DbConnection, page: int, page_size: int):
+    return db.query(models.Session).limit(page_size).offset((page - 1) * page_size).all()
+
+
+def get_session(db: DbConnection, user_uuid: str, device_uuid: str):
+    return db.query(models.Session).filter(models.Session.user_uuid == user_uuid,
+                                           models.Session.device_uuid == device_uuid
+                                           ).order_by(models.Session.created_at.desc()).first()
+
+
+def get_session_by_token(db: DbConnection, token: str):
+    return db.query(models.Session).filter(models.Session.token == token).first()
+
+
+def delete_session(db: DbConnection, session_uuid: str):
+    session = db.query(models.Session).filter(models.Session.uuid == session_uuid).first()
+    if session:
+        db.delete(session)
+        db.commit()
+        return session
+    return None
 
 
 def get_user(db: DbConnection, user_uuid: str):

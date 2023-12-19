@@ -1,4 +1,5 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, DateTime
+from sqlalchemy.orm import relationship
 
 from app.database import database
 
@@ -8,6 +9,8 @@ class User(database.Base):
 
     uuid = Column(String, primary_key=True, index=True)
     email = Column(String, unique=True, index=True)
+
+    sessions = relationship("Session", back_populates="user")
 
     def to_dict(self):
         return {
@@ -25,8 +28,11 @@ class Session(database.Base):
     is_new_user = Column(Boolean, default=True)
     is_new_device = Column(Boolean, default=True)
     status = Column(String, default="pending")
-    device_uuid = Column(String, nullable=False)
-    user_uuid = Column(String, nullable=False)
+    device_uuid = Column(String, ForeignKey("devices.uuid"))
+    user_uuid = Column(String, ForeignKey("users.uuid"))
+
+    user = relationship("User", back_populates="sessions")
+    device = relationship("Device", back_populates="sessions")
 
 
 class Device(database.Base):
@@ -35,6 +41,8 @@ class Device(database.Base):
     uuid = Column(String, primary_key=True, index=True)
     type = Column(String)
     vendor_uuid = Column(String)
+
+    sessions = relationship("Session", back_populates="device")
 
     def to_dict(self):
         return {
